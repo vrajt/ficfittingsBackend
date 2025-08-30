@@ -13,6 +13,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
       // integratedSecurity: true,
     },
   },
+   timezone: "+00:00",
   logging: false,
 });
 

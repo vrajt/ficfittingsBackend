@@ -2,12 +2,13 @@ const CustomerMaster = require('../models/CustomerMaster');
 
 // CREATE
 async function createCustomer(req, res) {
-  console.log('req::: ', req);
+  console.log('req::: ', req.body);
   try {
     const customer = await CustomerMaster.create(req.body);
     res.status(201).json(customer);
   } catch (error) {
     res.status(500).json({ message: 'Error creating customer', error: error.message });
+    console.error(error.message)
   }
 }
 
