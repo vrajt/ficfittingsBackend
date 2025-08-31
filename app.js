@@ -17,6 +17,7 @@ app.use("/api/laboratories", require("./routes/labMasterRoutes"));
 app.use("/api/dimension-standards", require("./routes/dimStandardRoutes"));
 app.use("/api/start-materials", require("./routes/srmMasterRoutes"));
 app.use("/api/othertests", require("./routes/otherTestMasterRoutes"));
+app.use("/api/lot-test-values", require("./routes/lotTestValueRoutes"));
 
 // Test DB connection
 sequelize.authenticate()
