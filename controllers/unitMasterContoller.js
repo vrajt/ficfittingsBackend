@@ -3,16 +3,8 @@ const UOMMaster = require('../models/UOMMaster');
 
 
 async function getAll(req, res) {
-  console.log('⚡ Debug: Incoming request to getAll');
-  console.log('Headers:', req.headers);
-  console.log('Query Params:', req.query);
-  console.log('Route Params:', req.params);
-  console.log('Body:', req.body);
-
   try {
     const units = await UnitMaster.findAll({ limit: 100 });
-    console.log('units::: ', units);
-    console.log(`✅ Found ${units.length} units`);
     res.status(200).json(units);
   } catch (error) {
     console.error('❌ Error fetching data:', error);
@@ -69,7 +61,6 @@ async function remove(req, res) {
   }
 }
 async function getAllUOM(req, res) {
-  console.log('req::: ', req);
   try {
     const uoms = await UOMMaster.find({}, { UOM: 1, _id: 0 });
     res.status(200).json(uoms);

@@ -18,7 +18,10 @@ app.use("/api/dimension-standards", require("./routes/dimStandardRoutes"));
 app.use("/api/start-materials", require("./routes/srmMasterRoutes"));
 app.use("/api/othertests", require("./routes/otherTestMasterRoutes"));
 app.use("/api/lot-test-values", require("./routes/lotTestValueRoutes"));
-
+app.use("/api/tcitem", require("./routes/tcItemRoutes"));
+app.use("/api/tcmain", require("./routes/tcMainRoutes"));
+app.use("/api/mtcstandards", require("./routes/mtcStandardRoutes"));
+app.use("/api/tcheattreat", require("./routes/tcHeatTreatRoutes"));
 // Test DB connection
 sequelize.authenticate()
   .then(() => console.log('✅ DB Connected'))
