@@ -7,6 +7,8 @@ router.post("/", controller.createMtcStandard);       // Create
 router.get("/", controller.getAllMtcStandards);       // Read all
 router.get("/:id", controller.getMtcStandardById);    // Read one
 router.put("/:id", controller.updateMtcStandard);     // Update
-router.delete("/:id", controller.deleteMtcStandard);  // Delete
+router.delete("/:id", controller.deleteMtcStandard);
+
+  // Delete
 
 module.exports = router;

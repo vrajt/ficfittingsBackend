@@ -3,11 +3,16 @@ const CustomerMaster = require('../models/CustomerMaster');
 // CREATE
 async function createCustomer(req, res) {
   try {
-    const customer = await CustomerMaster.create(req.body);
+    const now = new Date();
+    const customer = await CustomerMaster.create({
+      ...req.body,
+      CreatedDate: now,
+      UpdateDate: now
+    });
     res.status(201).json(customer);
   } catch (error) {
     res.status(500).json({ message: 'Error creating customer', error: error.message });
-    console.error(error.message)
+    console.error(error.message);
   }
 }
 
@@ -39,12 +44,16 @@ async function getCustomerById(req, res) {
 async function updateCustomer(req, res) {
   try {
     const { id } = req.params;
-    const [updated] = await CustomerMaster.update(req.body, {
-      where: { Id: id }
-    });
+    const now = new Date();
+    const [updated] = await CustomerMaster.update(
+      { ...req.body, UpdateDate: now },
+      { where: { Id: id } }
+    );
+
     if (!updated) {
       return res.status(404).json({ message: 'Customer not found' });
     }
+
     const updatedCustomer = await CustomerMaster.findByPk(id);
     res.status(200).json(updatedCustomer);
   } catch (error) {

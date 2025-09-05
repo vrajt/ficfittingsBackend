@@ -10,11 +10,11 @@ const CustomerMaster = sequelize.define('CustomerMaster', {
   },
   CId: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // will be set after Id is generated
   },
   CName: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false // ✅ Only this field is mandatory
   },
   CAddress: {
     type: DataTypes.STRING,
@@ -35,9 +35,7 @@ const CustomerMaster = sequelize.define('CustomerMaster', {
   EMail_1: {
     type: DataTypes.STRING,
     allowNull: true,
-    validate: {
-      isEmail: true
-    }
+    
   },
   Contact_2: {
     type: DataTypes.STRING,
@@ -52,7 +50,7 @@ const CustomerMaster = sequelize.define('CustomerMaster', {
   },
   IsBlocked: {
     type: DataTypes.BOOLEAN,
-    allowNull: false,
+    allowNull: true, // ✅ nullable (default false will handle empty case)
     defaultValue: false
   },
   CreatedBy: {
@@ -73,13 +71,21 @@ const CustomerMaster = sequelize.define('CustomerMaster', {
   },
   Selected: {
     type: DataTypes.BOOLEAN,
-    allowNull: false,
+    allowNull: true, // ✅ nullable
     defaultValue: false
   }
 }, {
   tableName: 'CustomerMaster',
   schema: 'dbo',
   timestamps: false
+});
+
+// Hook to set CId = Id after creation
+CustomerMaster.afterCreate(async (customer, options) => {
+  if (!customer.CId) {
+    customer.CId = customer.Id.toString();
+    await customer.save({ transaction: options.transaction });
+  }
 });
 
 module.exports = CustomerMaster;
