@@ -2,13 +2,12 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
 const TcHeatTreatDet = sequelize.define("TcHeatTreatDet", {
-  Id: {
-    type: DataTypes.BIGINT,
-    allowNull: false,
-    primaryKey: true,
-    // Add this line to explicitly disable auto-incrementing
-    autoIncrement: true,
-  },
+Id: {
+  type: DataTypes.BIGINT,
+  allowNull: false,
+  primaryKey: true,
+  autoIncrement: false   // ❌ turn this off
+},
   ApsFullDoc: { 
     type: DataTypes.STRING(50), 
     allowNull: false 

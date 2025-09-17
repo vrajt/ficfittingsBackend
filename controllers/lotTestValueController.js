@@ -24,6 +24,7 @@ exports.getById = async (req, res) => {
 
 // ✅ Create
 exports.create = async (req, res) => {
+  
   try {
     const record = await LotTestValue.create(req.body);
     res.status(201).json(record);

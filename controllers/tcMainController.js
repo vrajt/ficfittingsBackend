@@ -26,7 +26,6 @@ exports.getById = async (req, res) => {
     }
 
     const tcMain = await TcMain.findByPk(req.params.id);
-
     if (!tcMain) {
       return res.status(404).json({ message: "Record not found" });
     }
@@ -97,23 +96,27 @@ exports.create = async (req, res) => {
     }, { transaction: t });
 
     // 3️⃣ Create TcItem records (ensure PId assigned)
-    if (Array.isArray(items) && items.length > 0) {
-      const lastItem = await TcItem.findOne({ order: [["PId", "DESC"]], raw: true, transaction: t });
-      let nextPId = lastItem ? parseInt(lastItem.PId) + 1 : 1;
+if (Array.isArray(items) && items.length > 0) {
+  const lastItem = await TcItem.findOne({ order: [["Id", "DESC"]], raw: true, transaction: t });
+  let nextId = lastItem ? parseInt(lastItem.Id) + 1 : 1001;   // start after 1000
 
-      const tcItems = items.map(item => ({
-        ...item,
-        PId: nextPId++,           // Assign unique PId
-        ApsFullDoc,
-        CreatedDate: now,
-        UpdateDate: now,
-        FyFrom: item.FyFrom ? new Date(item.FyFrom) : null,
-        FyTo: item.FyTo ? new Date(item.FyTo) : null,
-        Po_Inv_PId: item.Po_Inv_PId || 0,
-      }));
+  const lastPItem = await TcItem.findOne({ order: [["PId", "DESC"]], raw: true, transaction: t });
+  let nextPId = lastPItem ? parseInt(lastPItem.PId) + 1 : 1;
 
-      await TcItem.bulkCreate(tcItems, { transaction: t });
-    }
+  const tcItems = items.map(item => ({
+    ...item,
+    Id: nextId++,            // assign sequential Id
+    PId: nextPId++,          // assign sequential PId
+    ApsFullDoc,
+    CreatedDate: now,
+    UpdateDate: now,
+    FyFrom: item.FyFrom ? new Date(item.FyFrom) : null,
+    FyTo: item.FyTo ? new Date(item.FyTo) : null,
+    Po_Inv_PId: item.Po_Inv_PId || 0,
+  }));
+
+  await TcItem.bulkCreate(tcItems, { transaction: t });
+}
 
     // 4️⃣ Create TcHeatTreatDet records
     if (Array.isArray(heatTests) && heatTests.length > 0) {
@@ -195,7 +198,6 @@ exports.create = async (req, res) => {
 // ⭐ EDIT / UPDATE (Already implemented)
 // This function updates an existing record based on the ID.
 exports.update = async (req, res) => {
-  console.log('Incoming Request Body:', JSON.stringify(req.body, null, 2));
 
   const t = await sequelize.transaction();
 
@@ -217,43 +219,53 @@ exports.update = async (req, res) => {
 
     // Update main document
     await mainDocument.update({ ...tcMainData, UpdateDate: new Date() }, { transaction: t });
-    console.log('Main document updated successfully.');
 
-    const manageChildRecords = async (model, data, primaryKey, foreignKey, defaultsFn = null) => {
-      if (!Array.isArray(data)) return;
 
-      const existingRecords = await model.findAll({ where: { [foreignKey]: ApsFullDoc }, transaction: t });
-      const existingIds = existingRecords.map(r => r[primaryKey]?.toString());
+ const manageChildRecords = async (model, data, primaryKey, foreignKey, defaultsFn = null) => {
+  if (!Array.isArray(data)) return;
 
-      // Find max existing Id for non-identity tables
-      let lastRecord = await model.findOne({ order: [[primaryKey, 'DESC']], raw: true, transaction: t });
-      let nextId = lastRecord ? parseInt(lastRecord[primaryKey]) + 1 : 1;
+  // Existing records in DB
+  const existingRecords = await model.findAll({ where: { [foreignKey]: ApsFullDoc }, transaction: t });
+  const existingIds = existingRecords.map(r => r[primaryKey]?.toString());
 
-      for (const item of data) {
-        // Ensure foreign key
-        if (!item[foreignKey] || item[foreignKey] === '') item[foreignKey] = ApsFullDoc;
+  // Incoming Ids from request
+  const incomingIds = data.map(d => d[primaryKey]?.toString()).filter(Boolean);
 
-        const itemId = item[primaryKey]?.toString();
+  // Find max existing Id for non-identity tables
+  let lastRecord = await model.findOne({ order: [[primaryKey, 'DESC']], raw: true, transaction: t });
+  let nextId = lastRecord ? parseInt(lastRecord[primaryKey]) + 1 : 1;
 
-        if (!itemId || !existingIds.includes(itemId)) {
-          const payload = {
-            ...item,
-            [primaryKey]: itemId || nextId++,
-            CreatedDate: new Date(),
-            UpdateDate: new Date(),
-            ...(defaultsFn ? defaultsFn(item) : {})
-          };
-          await model.create(payload, { transaction: t });
-          console.log(`Inserted new ${model.name} with Id ${payload[primaryKey]}`);
-        } else {
-          await model.update(
-            { ...item, UpdateDate: new Date() },
-            { where: { [primaryKey]: item[primaryKey] }, transaction: t }
-          );
-          console.log(`Updated ${model.name} with Id ${itemId}`);
-        }
-      }
-    };
+  // 🔹 Insert / Update
+  for (const item of data) {
+    if (!item[foreignKey] || item[foreignKey] === '') item[foreignKey] = ApsFullDoc;
+    const itemId = item[primaryKey]?.toString();
+
+    if (!itemId || !existingIds.includes(itemId)) {
+      const payload = {
+        ...item,
+        [primaryKey]: itemId || nextId++,
+        CreatedDate: new Date(),
+        UpdateDate: new Date(),
+        ...(defaultsFn ? defaultsFn(item) : {})
+      };
+      await model.create(payload, { transaction: t });
+     
+    } else {
+      await model.update(
+        { ...item, UpdateDate: new Date() },
+        { where: { [primaryKey]: item[primaryKey] }, transaction: t }
+      );
+     
+    }
+  }
+
+  // 🔹 Delete missing ones
+  const toDelete = existingIds.filter(id => !incomingIds.includes(id));
+  if (toDelete.length > 0) {
+    await model.destroy({ where: { [primaryKey]: toDelete }, transaction: t });
+    
+  }
+};
 
     await manageChildRecords(TcItem, itemsData, 'Id', 'ApsFullDoc', item => ({
       PId: item.PId || 0,
@@ -273,14 +285,14 @@ exports.update = async (req, res) => {
     await manageChildRecords(TcRemarks, remarksData, 'Id', 'ApsFullDoc');
 
     await t.commit();
-    console.log('Transaction committed successfully.');
+    
     res.json({ message: "Document and related records updated successfully" });
 
   } catch (error) {
     console.error("Error during multi-table update:", error.message);
     try {
       await t.rollback();
-      console.log("Transaction rolled back successfully");
+      
     } catch (rollbackError) {
       console.error("Rollback failed:", rollbackError.message);
     }
@@ -352,7 +364,7 @@ exports.getItemByTcMainId = async (req, res) => {
 exports.getAllMtcStandards = async (req, res) => {
   try {
     const standards = await MtcStandard.findAll();
-    console.log('standards::: ', standards);
+ 
     res.status(200).json(standards);
   } catch (error) {
     console.error("Error fetching MtcStandard records:", error);
