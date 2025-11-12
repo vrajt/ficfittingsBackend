@@ -81,16 +81,26 @@ exports.create = async (req, res) => {
     // 1️⃣ Generate UserNo & ApsFullDoc
 const lastRecord = await TcMain.findOne({ order: [["Id", "DESC"]], transaction: t });
 const nextNumber = lastRecord ? parseInt(lastRecord.UserNo || "0") + 1 : 1;
-const userNo = nextNumber.toString().padStart(6, "0");
-
-const currentYear = new Date().getFullYear();
-const branchCode = BranchId === 1 ? "NIMCO" : "FIC";
-
-// ✅ Format: FICMTC/000001/2025 or NIMCOMTC/000001/2025
-const ApsUserNo = `${branchCode}MTC/${userNo}/${currentYear}`;
-const ApsFullDoc = `${branchCode}MTC/${userNo}/${currentYear}`;
+const userNo = nextNumber.toString().padStart(4, "0");
 
 const now = new Date();
+const branchCode = BranchId === 1 ? "NIMC" : "FIC";
+
+// ✅ Determine financial year in short form (e.g., 25-26)
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth() + 1;
+const fyStartYear = currentMonth >= 4 ? currentYear : currentYear - 1;
+const fyShortStart = fyStartYear.toString().slice(-2);
+const fyShortEnd = (fyStartYear + 1).toString().slice(-2);
+const financialYear = `${fyShortStart}-${fyShortEnd}`;
+
+// ✅ Format: FICMTC/000001/25-26 or NIMCOMTC/000001/25-26
+const ApsUserNo = `${branchCode}/MTC/${userNo}/${financialYear}`;
+const ApsFullDoc = `${branchCode}/MTC/${userNo}/${financialYear}`;
+
+const nowDate = new Date();
+
+
 
 
     // 2️⃣ Create TcMain
