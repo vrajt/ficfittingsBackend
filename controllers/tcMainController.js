@@ -67,10 +67,12 @@ exports.getById = async (req, res) => {
 
 // ✅ Create (auto set CreatedDate & UpdateDate)
 exports.create = async (req, res) => {
+
   const t = await sequelize.transaction();
 
   try {
     const { BranchId, items, heatTests, remarks, otherTests } = req.body;
+    console.log('req.body::: ', req.body);
 
     if (!BranchId) {
       return res.status(400).json({ message: "BranchId is required" });
@@ -95,38 +97,56 @@ exports.create = async (req, res) => {
       UpdateDate: now,
     }, { transaction: t });
 
-    // 3️⃣ Create TcItem records (ensure PId assigned)
-if (Array.isArray(items) && items.length > 0) {
-  const lastItem = await TcItem.findOne({ order: [["Id", "DESC"]], raw: true, transaction: t });
-  let nextId = lastItem ? parseInt(lastItem.Id) + 1 : 1001;   // start after 1000
+    // 3️⃣ Create TcItem records (PId = 1..n per ApsFullDoc; ignore _tempId)
+    if (Array.isArray(items) && items.length > 0) {
+      const lastItem = await TcItem.findOne({ order: [["Id", "DESC"]], raw: true, transaction: t });
+      let nextId = lastItem ? parseInt(lastItem.Id) + 1 : 1001;
 
-  const lastPItem = await TcItem.findOne({ order: [["PId", "DESC"]], raw: true, transaction: t });
-  let nextPId = lastPItem ? parseInt(lastPItem.PId) + 1 : 1;
+      let nextPId = 1; // per certificate
 
-  const tcItems = items.map(item => ({
-    ...item,
-    Id: nextId++,            // assign sequential Id
-    PId: nextPId++,          // assign sequential PId
-    ApsFullDoc,
-    CreatedDate: now,
-    UpdateDate: now,
-    FyFrom: item.FyFrom ? new Date(item.FyFrom) : null,
-    FyTo: item.FyTo ? new Date(item.FyTo) : null,
-    Po_Inv_PId: item.Po_Inv_PId || 0,
-  }));
+      const tcItems = items.map((it) => {
+        const {
+          ProductName,
+          Specification,
+          HeatNo,
+          Qty1,
+          Qty1Unit,
+          Po_Inv_PId,
+          FyFrom,
+          FyTo,
+          // explicitly drop _tempId and any unknown props
+        } = it;
 
-  await TcItem.bulkCreate(tcItems, { transaction: t });
-}
+        return {
+          Id: nextId++,
+          PId: nextPId++,
+          ApsFullDoc,
+          ProductName: ProductName || "",
+          Specification: Specification || "",
+          HeatNo: HeatNo || "",
+          Qty1: Qty1 ?? 0,
+          Qty1Unit: Qty1Unit || "",
+          Po_Inv_PId: Po_Inv_PId || 0,
+          FyFrom: FyFrom ? new Date(FyFrom) : null,
+          FyTo: FyTo ? new Date(FyTo) : null,
+          CreatedDate: now,
+          UpdateDate: now,
+        };
+      });
 
-    // 4️⃣ Create TcHeatTreatDet records
+      await TcItem.bulkCreate(tcItems, { transaction: t });
+    }
+
+    // 4️⃣ TcHeatTreatDet (PId = 1..n per certificate; ignore _tempId)
     if (Array.isArray(heatTests) && heatTests.length > 0) {
       const lastHeat = await TcHeatTreatDet.findOne({ order: [["Id", "DESC"]], raw: true, transaction: t });
       let nextHeatId = lastHeat ? parseInt(lastHeat.Id) + 1 : 1;
+      let nextHeatPId = 1;
 
       for (const h of heatTests) {
         await TcHeatTreatDet.create({
           Id: nextHeatId++,
-          PId: h.PId || nextHeatId, // Ensure PId not null
+          PId: nextHeatPId++,
           ApsFullDoc,
           HeatNo: h.HeatNo || "",
           Heat_Code: h.Heat_Code || "",
@@ -140,7 +160,7 @@ if (Array.isArray(items) && items.length > 0) {
       }
     }
 
-    // 5️⃣ TcRemarks
+    // 5️⃣ TcRemarks (keep given PId, but ignore _tempId)
     if (Array.isArray(remarks) && remarks.length > 0) {
       const lastRemark = await TcRemarks.findOne({ order: [["Id", "DESC"]], raw: true, transaction: t });
       let nextRemarkId = lastRemark ? parseInt(lastRemark.Id) + 1 : 1;
@@ -162,15 +182,16 @@ if (Array.isArray(items) && items.length > 0) {
       }
     }
 
-    // 6️⃣ TcOthTestDet
+    // 6️⃣ TcOthTestDet (PId = 1..n per certificate; ignore _tempId)
     if (Array.isArray(otherTests) && otherTests.length > 0) {
       const lastOther = await TcOthTestDet.findOne({ order: [["Id", "DESC"]], raw: true, transaction: t });
       let nextOtherId = lastOther ? parseInt(lastOther.Id) + 1 : 1;
+      let nextOtherPId = 1;
 
       for (const o of otherTests) {
         await TcOthTestDet.create({
           Id: nextOtherId++,
-          PId: o.PId || nextOtherId,
+          PId: nextOtherPId++,
           ApsFullDoc,
           HeatNo: o.HeatNo || "",
           Test_Code: o.Test_Code || "",
@@ -198,6 +219,7 @@ if (Array.isArray(items) && items.length > 0) {
 // ⭐ EDIT / UPDATE (Already implemented)
 // This function updates an existing record based on the ID.
 exports.update = async (req, res) => {
+  console.log('req::: ', req.body);
 
   const t = await sequelize.transaction();
 

@@ -26,7 +26,9 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   
   try {
+     console.log('req.body::: ', req.body);
     const record = await LotTestValue.create(req.body);
+   
     res.status(201).json(record);
   } catch (err) {
     console.error("Error creating record:", err);
@@ -36,6 +38,7 @@ exports.create = async (req, res) => {
 
 // ✅ Update
 exports.update = async (req, res) => {
+  console.log('req::: ', req);
   try {
     const record = await LotTestValue.findByPk(req.params.id);
     if (!record) return res.status(404).json({ error: "Not found" });

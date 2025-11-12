@@ -34,6 +34,7 @@ exports.createTcItem = async (req, res) => {
 
 // ✅ Update (by Id)
 exports.updateTcItem = async (req, res) => {
+  console.log('req::: ', req.body);
   try {
     const item = await TcItem.findOne({ where: { Id: req.params.id } });
     if (!item) return res.status(404).json({ message: "Not found" });
