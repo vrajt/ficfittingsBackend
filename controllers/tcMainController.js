@@ -83,11 +83,15 @@ const lastRecord = await TcMain.findOne({ order: [["Id", "DESC"]], transaction: 
 const nextNumber = lastRecord ? parseInt(lastRecord.UserNo || "0") + 1 : 1;
 const userNo = nextNumber.toString().padStart(6, "0");
 
+const currentYear = new Date().getFullYear();
 const branchCode = BranchId === 1 ? "NIMCO" : "FIC";
-const ApsUserNo = `${branchCode}MTC${userNo}`;
-const ApsFullDoc = `${branchCode}MTC${userNo}`;
+
+// ✅ Format: FICMTC/000001/2025 or NIMCOMTC/000001/2025
+const ApsUserNo = `${branchCode}MTC/${userNo}/${currentYear}`;
+const ApsFullDoc = `${branchCode}MTC/${userNo}/${currentYear}`;
 
 const now = new Date();
+
 
     // 2️⃣ Create TcMain
     const newTcMain = await TcMain.create({
