@@ -79,13 +79,15 @@ exports.create = async (req, res) => {
     }
 
     // 1️⃣ Generate UserNo & ApsFullDoc
-    const lastRecord = await TcMain.findOne({ order: [["Id", "DESC"]], transaction: t });
-    const nextNumber = lastRecord ? parseInt(lastRecord.UserNo || "0") + 1 : 1;
-    const userNo = nextNumber.toString().padStart(6, "0");
-    const ApsUserNo = "TC" + "2025" + userNo;
-    const branchCode = BranchId === 1 ? "NIMCO" : "FIC";
-    const ApsFullDoc = "TC" + branchCode + "2025" + userNo;
-    const now = new Date();
+const lastRecord = await TcMain.findOne({ order: [["Id", "DESC"]], transaction: t });
+const nextNumber = lastRecord ? parseInt(lastRecord.UserNo || "0") + 1 : 1;
+const userNo = nextNumber.toString().padStart(6, "0");
+
+const branchCode = BranchId === 1 ? "NIMCO" : "FIC";
+const ApsUserNo = `${branchCode}MTC${userNo}`;
+const ApsFullDoc = `${branchCode}MTC${userNo}`;
+
+const now = new Date();
 
     // 2️⃣ Create TcMain
     const newTcMain = await TcMain.create({
